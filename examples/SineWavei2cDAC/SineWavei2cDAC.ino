@@ -6,7 +6,6 @@
 
 mcp4728 dac = mcp4728(0); // instantiate mcp4728 object, Device ID = 0
 const float pi = 3.141529;
-bool first_run = true;
 
 const int period = 165;
 const int off1 = period / 3;
@@ -48,15 +47,12 @@ void setup()
     pinMode(LDACpin, OUTPUT);
     digitalWrite(LDACpin, LOW);
   */
+  delay(1000);
+  printStatus();
 }
 
 void loop()
 {
-  if(first_run)
-  {
-    printStatus(); // Print all internal value and setting of input register and EEPROM.
-    first_run = false;
-  }
   for (int i = 0; i < period; i++)
   {
     dac.analogWrite(sine[i]/1.6,sine[(i+off1)%period]/2,sine[(i+off2)%period],sine[i]); // write to input register of DAC four channel (channel 0-3) together. Value 0-4095
