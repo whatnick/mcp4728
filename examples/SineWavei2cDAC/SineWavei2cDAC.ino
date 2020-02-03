@@ -1,15 +1,20 @@
 /*
   Basic use of Arduino library for MicroChip MCP4728 I2C D/A converter
   For discussion and feedback, please go to http://arduino.cc/forum/index.php/topic,51842.0.html
+  Better driver now available via Adafruit, and this code may be ported to it in the near future.
+  https://learn.adafruit.com/adafruit-mcp4728-i2c-quad-dac?view=all
 */
 #include "mcp4728.h"
 
 mcp4728 dac = mcp4728(0); // instantiate mcp4728 object, Device ID = 0
 const float pi = 3.141529;
+bool first_run = true;
 
 const int period = 165;
 const int off1 = period / 3;
 const int off2 = 2 * period / 3;
+
+// Sine waveform lookup
 const int sine[period] = {0x800, 0x84e, 0x89d, 0x8eb, 0x939, 0x986, 0x9d3, 0xa1f,
                           0xa6a, 0xab4, 0xafe, 0xb46, 0xb8d, 0xbd2, 0xc17, 0xc59,
                           0xc9a, 0xcda, 0xd17, 0xd53, 0xd8c, 0xdc4, 0xdf9, 0xe2c,
@@ -30,14 +35,15 @@ const int sine[period] = {0x800, 0x84e, 0x89d, 0x8eb, 0x939, 0x986, 0x9d3, 0xa1f
                           0xf9, 0x120, 0x149, 0x175, 0x1a3, 0x1d4, 0x207, 0x23c,
                           0x274, 0x2ad, 0x2e9, 0x326, 0x366, 0x3a7, 0x3e9, 0x42e,
                           0x473, 0x4ba, 0x502, 0x54c, 0x596, 0x5e1, 0x62d, 0x67a,
-                          0x6c7, 0x715, 0x763, 0x7b2, 0x800
-                         };
+                          0x6c7, 0x715, 0x763, 0x7b2, 0x800};
+
+int lut_index = 0;
 
 void setup()
 {
-  Serial.begin(9600);  // initialize serial interface for print()
+  Serial.begin(9600); // initialize serial interface for print()
   Serial.println("Initializing DAC");
-  dac.begin();  // initialize i2c interface
+  dac.begin(); // initialize i2c interface
   Wire.setClock(3200000L);
   dac.vdd(3300); // set VDD(mV) of MCP4728 for correct conversion between LSB and Vout
 
@@ -53,9 +59,14 @@ void setup()
 
 void loop()
 {
-  for (int i = 0; i < period; i++)
+  int va = sine[lut_index];
+  int vb = sine[(lut_index + off1) % period];
+  int vc = sine[(lut_index + off2) % period];
+  dac.analogWrite(va, vb, vc, va); // write to input register of DAC four channel (channel 0-3) together. Value 0-4095
+  lut_index++;
+  if (lut_index >= period)
   {
-    dac.analogWrite(sine[i]/1.6,sine[(i+off1)%period]/2,sine[(i+off2)%period],sine[i]); // write to input register of DAC four channel (channel 0-3) together. Value 0-4095
+    lut_index = 0;
   }
 }
 
@@ -68,24 +79,24 @@ void printStatus()
     Serial.print(channel, DEC);
     Serial.print("   ");
     Serial.print("    ");
-    Serial.print(dac.getVref(channel),BIN);
+    Serial.print(dac.getVref(channel), BIN);
     Serial.print("     ");
-    Serial.print(dac.getGain(channel),BIN);
+    Serial.print(dac.getGain(channel), BIN);
     Serial.print("       ");
-    Serial.print(dac.getPowerDown(channel),BIN);
+    Serial.print(dac.getPowerDown(channel), BIN);
     Serial.print("       ");
-    Serial.println(dac.getValue(channel),DEC);
+    Serial.println(dac.getValue(channel), DEC);
 
     Serial.print("EEPROM");
-    Serial.print(channel,DEC);
+    Serial.print(channel, DEC);
     Serial.print("    ");
-    Serial.print(dac.getVrefEp(channel),BIN);
+    Serial.print(dac.getVrefEp(channel), BIN);
     Serial.print("     ");
-    Serial.print(dac.getGainEp(channel),BIN);
+    Serial.print(dac.getGainEp(channel), BIN);
     Serial.print("       ");
-    Serial.print(dac.getPowerDownEp(channel),BIN);
+    Serial.print(dac.getPowerDownEp(channel), BIN);
     Serial.print("       ");
-    Serial.println(dac.getValueEp(channel),DEC);
+    Serial.println(dac.getValueEp(channel), DEC);
   }
   Serial.println(" ");
 }
